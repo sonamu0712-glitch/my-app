@@ -19,6 +19,9 @@
     "check-send": "node --import ./scripts/ts-hook.mjs scripts/check-send.mjs",
     "check-history": "node --import ./scripts/ts-hook.mjs scripts/check-history.mjs",
     "bench": "node --import ./scripts/ts-hook.mjs scripts/bench.mjs",
+    "check-safety": "node --import ./scripts/ts-hook.mjs scripts/check-safety.mjs",
+    "check-limits": "node --import ./scripts/ts-hook.mjs scripts/check-limits.mjs",
+    "check-api": "node scripts/check-api.mjs",
     "check-ai": "node --env-file=.env --import ./scripts/ts-hook.mjs scripts/check-ai.mjs"
   },
   "dependencies": {

@@ -18,6 +18,12 @@ const 사유글: Record<Reason, string> = {
   "규제": "규제",
 };
 
+// 접수 시각을 "2026. 11. 20. 오후 2:49:17"처럼 읽기 쉽게 보여 준다. 시각 모양이 아니면 받은 글 그대로 보여 준다.
+function 읽기쉬운시각(글: string): string {
+  const 시각 = new Date(글);
+  return Number.isNaN(시각.getTime()) ? 글 : 시각.toLocaleString("ko-KR");
+}
+
 export default function ResultDetail({
   결과,
   기록들,
@@ -41,7 +47,7 @@ export default function ResultDetail({
         <div className="space-y-3">
           <div>
             <p className="break-all font-medium">{결과.title}</p>
-            <p className="text-xs text-zinc-500">접수 {결과.receivedInfo}</p>
+            <p className="text-xs text-zinc-500">접수 {읽기쉬운시각(결과.receivedInfo)}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

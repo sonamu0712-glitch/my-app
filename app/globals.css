@@ -1,26 +1,124 @@
 @import "tailwindcss";
 
+/* 화면 디자인(색·글꼴·카드 모양)만 정의한다. 기능 코드는 건드리지 않는다.
+   느낌: 공공기관 누리집처럼 차분한 남색 계열, 흰 카드, 또렷한 제목, 넉넉한 여백. */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f6fa; /* 옅은 푸른 회색 바탕 */
+  --foreground: #222222;
+  --gov-strip: #0b3a6b; /* 맨 위 안내 띠 */
+  --gov-header: #ffffff;
+  --gov-line: #d5dde8;
+  --gov-footer: #192b3e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* 공공기관 누리집에서 흔한 또렷한 고딕. 없는 글꼴은 다음 것으로 넘어간다. */
+  --font-sans: "Pretendard GOV", "Pretendard", "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+
+  /* 파랑 계열을 차분한 남색으로 바꾼다 (버튼·배지·강조가 모두 이 색을 따른다) */
+  --color-blue-50: #eef3f9;
+  --color-blue-100: #dce7f3;
+  --color-blue-200: #bcd0e6;
+  --color-blue-300: #92b2d6;
+  --color-blue-400: #5f8bbf;
+  --color-blue-500: #2e63a3;
+  --color-blue-600: #1b4f8f;
+  --color-blue-700: #123d73;
+  --color-blue-800: #0d2f5a;
+  --color-blue-900: #0a2748;
+  --color-blue-950: #061a33;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0d1117;
+    --foreground: #e8ecf1;
+    --gov-strip: #0a2748;
+    --gov-header: #131a24;
+    --gov-line: #2a3442;
+    --gov-footer: #0a1118;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+/* ── 맨 위 띠·머리·바닥 (page.tsx의 표시용 마크업) ── */
+.gov-strip {
+  background: var(--gov-strip);
+  color: #ffffff;
+  font-size: 0.875rem;
+}
+.gov-header {
+  background: var(--gov-header);
+  border-bottom: 1px solid var(--gov-line);
+}
+.gov-notice {
+  border-left: 5px solid var(--color-blue-600);
+  background: var(--color-blue-50);
+  color: var(--color-blue-900);
+}
+.gov-footer {
+  background: var(--gov-footer);
+  color: #c9d3df;
+  font-size: 0.875rem;
+}
+@media (prefers-color-scheme: dark) {
+  .gov-notice {
+    background: #12263f;
+    color: #dce7f3;
+    border-left-color: var(--color-blue-400);
+  }
+}
+
+/* ── 카드: 이름표(aria-label)가 있는 구역을 흰 카드로, 제목에는 남색 막대 ── */
+main section[aria-label] {
+  border-radius: 14px;
+  border-color: var(--gov-line);
+  box-shadow: 0 1px 2px rgba(15, 40, 80, 0.06), 0 6px 18px rgba(15, 40, 80, 0.05);
+  padding: 1.25rem;
+}
+main section[aria-label] > h2 {
+  border-left: 5px solid var(--color-blue-600);
+  padding-left: 0.65rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.9rem;
+}
+
+/* 버튼은 조금 더 둥글고 굵게 */
+main button:not([role="tab"]) {
+  transition: background-color 0.15s, border-color 0.15s;
+}
+main button.bg-blue-600 {
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+/* 표 머리줄은 옅은 푸른 바탕 */
+main table thead {
+  background: var(--color-blue-50);
+  color: var(--color-blue-900);
+}
+@media (prefers-color-scheme: dark) {
+  main table thead {
+    background: #16253a;
+    color: #dce7f3;
+  }
+}
+
+/* 키보드로 이동할 때 보이는 테두리(접근성) */
+:focus-visible {
+  outline: 3px solid var(--color-blue-400);
+  outline-offset: 2px;
 }

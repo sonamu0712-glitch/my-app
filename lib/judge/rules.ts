@@ -8,8 +8,8 @@
 import type { Evidence, Reason } from "@/types";
 import type { TextUnit } from "@/lib/hwpx/extract";
 import {
-  비서실단어, 조정실단어, 총리단어, 위원회단어, 총리소속단어들, 신설단어들,
-  규제강한단어들, 규제단어, 질서위반단어들, 부총리단어,
+  비서실단어, 조정실단어, 총리단서들, 위원회단어, 총리소속단어들, 신설단어들,
+  규제강한단어들, 규제단어, 질서위반단어들, 부총리단어, 인젝션표현들,
 } from "./keywords";
 
 // 단어 규칙이 알려주는 최소 판정 (이보다 낮게 내려가지 않는다는 뜻)
@@ -19,18 +19,18 @@ export interface RuleResult {
   reasons: Reason[]; // 단어로 확인된 포함 사유
   evidences: Evidence[]; // 근거 후보 (우선순위 순, 부총리 문장 제외). 3개로 줄이는 일은 합치기에서 한다.
   level: RuleLevel; // 단어만 봤을 때의 최소 판정
-  hints: { 위원회: boolean; 규제: boolean; 총리언급: boolean }; // AI·합치기가 참고할 단서
+  hints: { 위원회: boolean; 규제: boolean; 총리언급: boolean; 부총리: boolean; 질서위반: boolean; 인젝션: boolean }; // AI·합치기가 참고할 단서
 }
 
 // 문장 하나와 그 문단 안의 위치
-interface 문장 {
+export interface 문장 {
   text: string;
   start: number; // 문단 글자 속 시작 위치
   end: number;
 }
 
 // 문단을 문장으로 나눈다. 마침표·물음표·느낌표 뒤에 공백이 오거나 끝날 때만 자른다.
-function 문장나누기(글: string): 문장[] {
+export function 문장나누기(글: string): 문장[] {
   const 결과: 문장[] = [];
   let 시작 = 0;
   const 자르는곳 = /[.!?]+(?=\s|$)/g;
@@ -56,8 +56,12 @@ interface 발견 {
 
 // 같은 파일의 문단들을 이어 붙인 글(공백 제거)에서 단어를 찾는다. 문단 사이에 걸쳐 나뉜 단어도 찾는다.
 // 찾은 위치는 "단어가 시작하는 문단의 문장"으로 돌려준다.
+// 같은 단어가 수없이 반복된 본문으로 서버가 오래 걸리지 않도록, 단어 하나당 이 개수까지만 찾는다. (근거는 3개만 쓰인다)
+const 단어당최대발견 = 200;
+
 function 단어찾기(units: TextUnit[], 단어들: string[]): 발견[] {
   const 발견들: 발견[] = [];
+  const 문장캐시 = new Map<number, 문장[]>(); // 문단마다 문장 나누기를 한 번만 한다
   // 파일별로 묶는다 (파일 사이에 걸친 단어는 찾지 않는다)
   const 파일별 = new Map<string, number[]>();
   units.forEach((단위, 순서) => {
@@ -73,17 +77,24 @@ function 단어찾기(units: TextUnit[], 단어들: string[]): 발견[] {
       const 원문 = units[순서].text;
       for (let i = 0; i < 원문.length; i++) {
         if (/\s/.test(원문[i])) continue;
-        이은글 += 원문[i];
+        // 영문 대문자는 소문자로 맞춰 찾는다 (글자 수는 그대로라 위치 계산이 어긋나지 않는다)
+        이은글 += 원문[i] >= "A" && 원문[i] <= "Z" ? 원문[i].toLowerCase() : 원문[i];
         지도.push({ unitIndex: 순서, 글자위치: i });
       }
     }
     for (const 단어 of 단어들) {
       let 위치 = 이은글.indexOf(단어);
-      while (위치 !== -1) {
+      let 찾은개수 = 0;
+      while (위치 !== -1 && 찾은개수 < 단어당최대발견) {
         const { unitIndex, 글자위치 } = 지도[위치];
-        const 문장들 = 문장나누기(units[unitIndex].text);
+        let 문장들 = 문장캐시.get(unitIndex);
+        if (!문장들) {
+          문장들 = 문장나누기(units[unitIndex].text);
+          문장캐시.set(unitIndex, 문장들);
+        }
         const 해당 = 문장들.find((문) => 글자위치 >= 문.start && 글자위치 < 문.end) ?? 문장들[0];
         if (해당) 발견들.push({ 단어, unitIndex, sentence: 해당 });
+        찾은개수 += 1;
         위치 = 이은글.indexOf(단어, 위치 + 1);
       }
     }
@@ -96,7 +107,7 @@ export function judgeByRules(units: TextUnit[]): RuleResult {
   const 근거후보: { 순위: number; 증거: Evidence }[] = [];
   const 보인것 = new Set<string>();
   const 사유 = new Set<Reason>();
-  const 힌트 = { 위원회: false, 규제: false, 총리언급: false };
+  const 힌트 = { 위원회: false, 규제: false, 총리언급: false, 부총리: false, 질서위반: false, 인젝션: false };
   let 최소: RuleLevel = "없음";
   const 올리기 = (수준: RuleLevel) => {
     const 서열: RuleLevel[] = ["없음", "확인 필요", "포함"];
@@ -119,7 +130,11 @@ export function judgeByRules(units: TextUnit[]): RuleResult {
   if (비서실.length > 0) 사유.add("국무총리비서실");
   if (조정실.length > 0) 사유.add("국무조정실");
   [...비서실, ...조정실].forEach((찾음) => 근거담기(찾음, 1));
-  if (비서실.length + 조정실.length > 0) 올리기("포함");
+  // 부총리가 함께 나온 문장은 근거로 쓸 수 없다. 근거로 보여 줄 수 있는 문장이 있을 때만 "포함"이고,
+  // 부총리 문장에서만 찾았으면 사유는 남기되 "확인 필요"로 둔다. (근거 없이 "포함"을 내지 않는다)
+  const 근거가능한찾음 = [...비서실, ...조정실].filter((찾음) => !찾음.sentence.text.includes(부총리단어));
+  if (근거가능한찾음.length > 0) 올리기("포함");
+  else if (비서실.length + 조정실.length > 0) 올리기("확인 필요");
 
   // 2) 위원회: 국무총리 소속이면 포함(신설/기존 구분), 그 밖의 위원회는 확인 필요
   const 위원회찾음 = 단어찾기(units, [위원회단어]);
@@ -154,13 +169,25 @@ export function judgeByRules(units: TextUnit[]): RuleResult {
   }
 
   // 4) "국무총리"만 언급: 사유로 확정하지 않고 확인 필요 단서로만 쓴다. (부총리는 이 단어를 포함하지 않는다)
-  const 총리찾음 = 단어찾기(units, [총리단어]);
+  const 총리찾음 = 단어찾기(units, 총리단서들);
   if (총리찾음.length > 0) {
     힌트.총리언급 = true;
     총리찾음.forEach((찾음) => 근거담기(찾음, 6));
     // 위원회 소속 문장에서 이미 포함으로 올린 경우가 아니면 확인 필요
     올리기("확인 필요");
   }
+
+  // 4-2) AI에게 지시하는 듯한 표현이 본문에 있으면 판정을 그대로 믿지 않고 사람이 보게 한다 (프롬프트 인젝션 대비)
+  const 인젝션찾음 = 단어찾기(units, 인젝션표현들);
+  if (인젝션찾음.length > 0) {
+    힌트.인젝션 = true;
+    인젝션찾음.forEach((찾음) => 근거담기(찾음, 7));
+    올리기("확인 필요");
+  }
+
+  // 5) 합치기가 쓰는 단서: 부총리가 나오는지, 질서위반행위·과태료 단어가 나오는지
+  힌트.부총리 = units.some((단위) => 단위.text.includes(부총리단어));
+  힌트.질서위반 = units.some((단위) => 포함하는가(공백없애기(단위.text), 질서위반단어들));
 
   const 순서대로 = 근거후보.sort((가, 나) => 가.순위 - 나.순위).map((칸) => 칸.증거);
   return { reasons: [...사유], evidences: 순서대로, level: 최소, hints: 힌트 };

@@ -59,6 +59,12 @@
 - 코드를 바꾸면 **무엇을 왜 바꿨는지 한 줄로** 알려준다.
 - 이미 설치된 서브에이전트는 필요할 때마다 적극 활용한다. (예: 화면 설계는 `bkit:frontend-architect`, 코드 점검은 `bkit:code-analyzer`, 기획서와 구현 비교는 `bkit:gap-detector`)
 
+## 검증 규칙 (Part 4에서 배운 것)
+
+- 판정 코드(`lib/judge/`)나 AI 지시문을 바꾸면 `npm run check-safety`, `npm run check-merge`, `npm run bench -- 30`을 다시 돌려 정답률·누락률이 그대로인지 확인한다. (AI 지시문에 한 문장만 더해도 "없음"이 "확인 필요"로 바뀐 적이 있다.)
+- 화면 디자인만 바꿀 때는 `app/globals.css`와 `app/page.tsx`의 틀만 고치고, 업로드·판정·발송 코드는 건드리지 않는다. 개발 서버가 옛 스타일을 보여 주면 `.next` 폴더를 `trash-can/`으로 옮기고 서버를 다시 켠다.
+- 새 읽기 형식·한도·안전 규칙을 추가하면 같은 작업에서 확인 스크립트(`scripts/check-*.mjs`)도 함께 만들어 `CHECK.md`에 기록한다.
+
 ## 커밋 규칙
 
 - 커밋 메시지는 한국어로, 무엇을 왜 바꿨는지 한 줄로 적는다.

@@ -18,6 +18,7 @@ export interface TextUnit {
 export interface ExtractResult {
   units: TextUnit[];
   tableCount: number; // 읽은 표 개수 (참고용)
+  picCount: number; // 본문에서 만난 그림 개수 (그림 위주의 스캔본을 가려내는 데 쓴다)
 }
 
 // 읽지 않는 영역: 머리말·꼬리말·각주·미주 (본문이 아님)
@@ -49,6 +50,7 @@ function 자식들(노드: XmlNode): XmlNode[] {
 interface 집계값 {
   표개수: number;
   표글자: string[]; // 표 칸 안 문단들의 글자 (칸 순서대로)
+  그림개수: number;
 }
 
 // 문단 안에서 글자를 모은다. 글조각(t)의 글자만 이어 붙이고,
@@ -64,6 +66,8 @@ function 글자모으기(노드들: XmlNode[], 집계: 집계값): string {
     } else if (짧은 === "tbl") {
       집계.표개수 += 1;
       표읽기(자식들(노드), 집계);
+    } else if (짧은 === "pic") {
+      집계.그림개수 += 1; // 그림은 글자가 아니므로 읽지 않고 개수만 센다
     } else if (읽지않는태그.has(짧은)) {
       continue; // 머리말·꼬리말·각주·미주는 읽지 않는다
     } else {
@@ -135,7 +139,7 @@ export async function extractHwpx(
   });
 
   const units: TextUnit[] = [];
-  const 집계: 집계값 = { 표개수: 0, 표글자: [] };
+  const 집계: 집계값 = { 표개수: 0, 표글자: [], 그림개수: 0 };
 
   for (let 순서 = 0; 순서 < 구역들.length; 순서++) {
     const 구역 = 구역들[순서];
@@ -161,5 +165,5 @@ export async function extractHwpx(
     }
   }
 
-  return { units, tableCount: 집계.표개수 };
+  return { units, tableCount: 집계.표개수, picCount: 집계.그림개수 };
 }

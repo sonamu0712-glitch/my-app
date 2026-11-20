@@ -23,7 +23,7 @@ function 실패결과(공문: UploadDoc, 접수: string, 메모: string): JudgeR
 export async function judgeOne(공문: UploadDoc, 접수: string): Promise<JudgeResult> {
   const 폼 = new FormData();
   폼.append("docId", 공문.docId);
-  폼.append("title", 공문.title);
+  폼.append("title", 공문.title.slice(0, 300)); // 서버 한도(300자)에 맞춘다
   폼.append("receivedInfo", 접수);
   // 공문 폴더 안쪽 경로를 파일 이름으로 보낸다 (서버가 확장자로 형식을 가린다)
   공문.files.forEach((칸) => 폼.append("files", 칸.file, 칸.name));

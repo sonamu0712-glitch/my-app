@@ -62,7 +62,7 @@ export function groupFolders(입력: 올릴파일[]): UploadDoc[] {
     const 합계 = 첨부들.reduce((합, 칸) => 합 + 칸.file.size, 0);
     const 공문: UploadDoc = {
       // 날짜를 앞에 붙여, 다른 날 올린 같은 이름·같은 순번 공문과 발송 기록이 섞이지 않게 한다 (작업 15번)
-      docId: `${날짜글}-${String(순번).padStart(3, "0")}-${제목}`,
+      docId: `${날짜글}-${String(순번).padStart(3, "0")}-${제목.slice(0, 100)}`, // 이름이 아주 길어도 구분값이 서버 한도(200자)를 넘지 않게 한다
       title: 제목,
       files: 첨부들,
       totalSize: 합계,

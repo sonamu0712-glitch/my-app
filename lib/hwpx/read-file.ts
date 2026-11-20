@@ -13,12 +13,17 @@ export type FailReason =
   | "PDF (이번 버전에서는 읽지 않음)"
   | "글자를 찾지 못함 (스캔본·그림만 있는 파일일 수 있음)"
   | "손상된 파일"
+  | "압축을 풀면 너무 큰 파일 (한도 초과)"
   | "지원하지 않는 파일 형식";
 
 // 첨부파일 1개의 읽기 결과
 export type FileReadResult =
   | { ok: true; fileName: string; units: TextUnit[] }
   | { ok: false; fileName: string; reason: FailReason };
+
+// 압축을 풀었을 때의 한도 (작은 파일이 풀면 수백 MB가 되는 "압축 폭탄"으로 서버가 멈추는 것을 막는다. CHECK.md SEC-002)
+const 풀린크기_한도 = 50 * 1024 * 1024; // 모든 항목을 합쳐 50MB
+const 본문파일_한도 = 50; // Contents/section*.xml 개수
 
 // 파일 앞부분(매직 바이트)으로 종류를 짐작한다. 이름만 믿지 않기 위함.
 function 앞부분이같은가(바이트: Uint8Array, 기대: number[]): boolean {
@@ -29,6 +34,34 @@ const PDF_머리 = [0x25, 0x50, 0x44, 0x46]; // "%PDF"
 
 function 실패(fileName: string, reason: FailReason): FileReadResult {
   return { ok: false, fileName, reason };
+}
+
+// 글자 파일(.txt) 읽기: UTF-8로 읽어 보고, 안 되면 한글 윈도우의 옛 글자 방식(EUC-KR/CP949)으로 읽는다.
+// 줄 하나를 문단 하나로 보고, 위치는 "줄 N"으로 표시한다. 빈 줄은 번호만 세고 건너뛴다.
+function 글자파일읽기(fileName: string, 바이트: Uint8Array): FileReadResult {
+  // 0 바이트가 있으면 글자 파일이 아니라 다른 형식을 이름만 바꾼 것으로 본다.
+  if (바이트.includes(0)) return 실패(fileName, "손상된 파일");
+  let 글: string;
+  try {
+    글 = new TextDecoder("utf-8", { fatal: true }).decode(바이트);
+  } catch {
+    try {
+      글 = new TextDecoder("euc-kr").decode(바이트);
+    } catch {
+      return 실패(fileName, "손상된 파일");
+    }
+  }
+  const units: TextUnit[] = [];
+  글
+    .replace(/^﻿/, "")
+    .split(/\r\n|\r|\n/)
+    .forEach((줄, 순서) => {
+      const 다듬음 = 줄.trim();
+      if (다듬음 !== "") units.push({ text: 다듬음, fileName, position: `줄 ${순서 + 1}` });
+    });
+  // 글자가 하나도 없으면 "없음"이 아니라 읽기 실패다.
+  if (units.length === 0) return 실패(fileName, "글자를 찾지 못함 (스캔본·그림만 있는 파일일 수 있음)");
+  return { ok: true, fileName, units };
 }
 
 // 첨부파일 1개를 읽는다. 어떤 경우에도 오류를 밖으로 던지지 않고, 성공/실패로 돌려준다.
@@ -42,6 +75,8 @@ export async function readAttachment(
   // 1) 이름 또는 파일 앞부분으로 읽지 않는 형식을 먼저 가려낸다.
   if (소문자이름.endsWith(".pdf") || 앞부분이같은가(바이트, PDF_머리)) return 실패(fileName, "PDF (이번 버전에서는 읽지 않음)");
   if (소문자이름.endsWith(".hwp") || 앞부분이같은가(바이트, 이전형식_머리)) return 실패(fileName, "이전 형식(.hwp)");
+  // 일반 글자 파일(.txt)은 HWPX처럼 압축을 풀 필요 없이 글자를 바로 읽는다.
+  if (소문자이름.endsWith(".txt")) return 글자파일읽기(fileName, 바이트);
   if (!소문자이름.endsWith(".hwpx")) return 실패(fileName, "지원하지 않는 파일 형식");
 
   // 2) HWPX: 압축 파일로 열리는지 본다.
@@ -50,6 +85,18 @@ export async function readAttachment(
     zip = await JSZip.loadAsync(바이트);
   } catch {
     return 실패(fileName, "손상된 파일");
+  }
+
+  // 2-2) 압축을 풀기 전에 풀었을 때의 크기와 본문 파일 수를 확인한다. (JSZip이 목록에서 알려 주는 원래 크기를 쓴다)
+  {
+    let 풀린크기 = 0;
+    let 본문파일수 = 0;
+    for (const [이름, 항목] of Object.entries(zip.files)) {
+      const 크기 = (항목 as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize;
+      if (typeof 크기 === "number") 풀린크기 += 크기;
+      if (/^Contents\/section\d+\.xml$/.test(이름)) 본문파일수 += 1;
+    }
+    if (풀린크기 > 풀린크기_한도 || 본문파일수 > 본문파일_한도) return 실패(fileName, "압축을 풀면 너무 큰 파일 (한도 초과)");
   }
 
   // 3) 암호 표시가 있으면 읽지 않는다. (HWPX는 manifest.xml에 암호화 정보가 들어간다)
@@ -62,9 +109,10 @@ export async function readAttachment(
 
   // 4) 본문 글자를 뽑는다. 읽다가 오류가 나면 손상으로 본다.
   try {
-    const { units } = await extractHwpx(바이트, fileName);
-    // 글자가 하나도 없으면 "없음"이 아니라 읽기 실패다. (스캔본·그림만 있는 파일)
-    if (units.length === 0) return 실패(fileName, "글자를 찾지 못함 (스캔본·그림만 있는 파일일 수 있음)");
+    const { units, picCount } = await extractHwpx(바이트, fileName);
+    // 글자가 하나도 없거나, 그림이 있는데 글자가 제목 정도(30자 이하)뿐이면 스캔본으로 보고 "없음"이 아니라 읽기 실패로 한다.
+    const 글자수 = units.reduce((합, 칸) => 합 + 칸.text.length, 0);
+    if (units.length === 0 || (picCount > 0 && 글자수 <= 30)) return 실패(fileName, "글자를 찾지 못함 (스캔본·그림만 있는 파일일 수 있음)");
     return { ok: true, fileName, units };
   } catch {
     return 실패(fileName, "손상된 파일");

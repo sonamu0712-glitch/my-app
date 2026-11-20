@@ -45,3 +45,6 @@ next-env.d.ts
 
 # bkit 플러그인 상태 폴더
 /.bkit/
+
+.vercel
+.env*

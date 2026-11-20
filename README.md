@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 총리실 타부처 법령조회 서비스
 
-## Getting Started
+타부처에서 온 **공문의 첨부파일**(주로 HWPX)을 읽어 **국무총리비서실·국무조정실 관련 업무가 있는지** 판정하고, 담당자가 확인한 뒤 **공람 메일**을 보내는 웹 앱입니다.
 
-First, run the development server:
+> **실습용 프로젝트입니다.** 실제 공문과 실제 직원 정보는 쓰지 않습니다. 시험에는 직접 만든 가짜 공문(HWPX)과 `example.com` 가상 조직도만 사용하며, 공람 메일은 실제로 전달되지 않는 **모의 발송**입니다. 이 앱에는 로그인이 없으므로 실제 업무에 쓰려면 먼저 접근 제한을 정해야 합니다.
+
+## 왜 만들었나
+
+하루에 공문 약 100건이 들어오고 건당 첨부파일이 3개쯤 됩니다. 담당자가 하나씩 열어 읽다 보면 시간이 오래 걸리고, 본문에 드러나지 않은 **위원회·규제** 관련 내용을 놓칠 수 있습니다. 이 앱은 하루치를 한 번에 올리면 글자를 읽어 판정하고, 근거 문장을 함께 보여 주어 **담당자가 25초 안에 확인**하도록 돕습니다. 목표는 하루 100건 확인을 **1시간 이내**로 줄이되, 놓치는 일은 만들지 않는 것입니다.
+
+## 주요 기능
+
+1. **일괄 업로드**: 공문마다 폴더 하나로 묶어 하루치(약 100건)를 한 번에 올립니다. 크기·개수 한도는 올리기 전에 알려 줍니다.
+2. **글자 읽기**: HWPX의 본문(본문 속 표 포함)과 `.txt`를 읽습니다. 머리말·각주는 읽지 않습니다.
+3. **판정**: 단어 규칙과 AI(OpenAI)를 합쳐 **포함 / 확인 필요 / 없음**을 정하고, 포함 사유(국무총리비서실·국무조정실·위원회(신설/기존)·규제)와 **근거 문장 3개 이내**(파일명·위치)를 보여 줍니다.
+4. **공람 발송**: 담당자가 버튼을 누르고 확인 창에서 한 번 더 확인해야만 발송됩니다. 같은 공문은 두 번 보내지 않고, 실패한 주소에게만 다시 보낼 수 있습니다.
+
+## 지키는 안전 규칙
+
+- 글자를 읽지 못한 파일은 **"읽기 실패"**로 표시하며 절대 "없음"으로 처리하지 않습니다. 일부 파일만 실패해도 최소 "확인 필요"입니다.
+- 애매하면 "없음"이 아니라 **"확인 필요"**입니다. 근거를 대지 못하면 "포함"이라고 하지 않습니다.
+- **사람이 확인한 뒤에만** 발송합니다. 자동 발송은 없습니다.
+- "부총리"만 나오는 문서는 포함이 아니고, 질서위반행위(과태료) 규제만 있는 경우는 규제가 아닙니다.
+- 업로드한 파일은 저장하지 않고, 파일 내용과 API 키는 서버 기록(로그)에 남기지 않습니다.
+
+## 시험 결과 (가짜 공문 기준)
+
+| 기준 | 목표 | 결과 |
+|------|------|------|
+| 정답률 | 90% 이상 | 100% (30/30) |
+| 누락률 | 5% 이하 (위원회·규제 0%) | 0% (위원회·규제 0%) |
+| "확인 필요" 비율 | 30% 이하 | 20% |
+| 공문 1건 처리 | 10초 이내 | 평균 약 1.3초 |
+| 하루 100건 | 1시간 이내 | 앱 약 27초 + 사람 확인 가정 시간 ≈ 42분 |
+
+시험 문장이 짧고 쉬운 가짜 문서라 실제 공문에서는 결과가 더 낮을 수 있습니다. 자세한 내용과 한계는 [TEST-REPORT.md](TEST-REPORT.md)와 [CHECK.md](CHECK.md)에 있습니다.
+
+## 문서 (기획 → 계획 → 설계 → 검증)
+
+| 문서 | 내용 |
+|------|------|
+| [PRD.md](PRD.md) | 기획서: 문제, 목표, 이용 흐름, 기능과 규칙, 범위 |
+| [PLAN.md](PLAN.md) | 계획서: 성공 기준과 만든 순서(작업 16개), 요구사항 |
+| [DESIGN.md](DESIGN.md) | 설계서: 화면, 데이터 흐름, 기술 선택 |
+| [CHECK.md](CHECK.md) | 검증 결과: 설계 대비 차이(Gap), 보안 점검, 보완 내역 |
+| [TEST-REPORT.md](TEST-REPORT.md) | 정확도·처리 시간 측정 결과 |
+| [CLAUDE.md](CLAUDE.md) | 개발 규칙 |
+
+## 기술
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · JSZip · fast-xml-parser · OpenAI · Zod
+
+## 직접 실행해 보기
+
+```bash
+npm install
+```
+
+프로젝트 폴더에 `.env` 파일을 만들고 판정용 AI 키를 넣습니다. (`.env`는 `.gitignore`에 등록되어 GitHub에 올라가지 않습니다.)
+
+```
+OPENAI_API_KEY=여기에_본인_키
+```
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`http://localhost:3000`을 열고, `samples/` 폴더(가짜 공문 24건)를 끌어놓거나 [공문 폴더 선택]으로 고른 뒤 [판정 시작]을 누르세요.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 확인 스크립트
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| 명령 | 확인하는 것 |
+|------|-------------|
+| `npm run samples` | 시험용 가짜 공문(HWPX) `samples/` 다시 만들기 |
+| `npm run check-safety` | 부총리·인젝션·근거 규칙 (AI 호출 없음) |
+| `npm run check-limits` | 압축 폭탄·스캔본 읽기 한도 |
+| `npm run check-merge` | 가짜 공문 24건 전체 판정 (OpenAI 호출) |
+| `npm run bench -- 30` | 30건 정확도 (서버를 켠 뒤 실행, OpenAI 호출) |
+| `npm run check-api` | `/api/send` 안전 규칙과 보안 헤더 (서버를 켠 뒤 실행) |
 
-## Learn More
+## 폴더 구조
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/          화면과 API (/api/judge 판정, /api/org 가상 조직도, /api/send 모의 발송)
+lib/          글자 읽기(hwpx), 판정(judge), 업로드 묶음(upload), 발송(send), 조직도(org)
+types/        공통 데이터 모양
+data/         가상 조직도 (example.com)
+samples/      시험용 가짜 공문
+scripts/      시험·확인 스크립트
+```

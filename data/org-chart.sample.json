@@ -1,0 +1,95 @@
+{
+  "설명": "가상 조직도입니다. 모든 이름·부서·주소는 지어낸 가짜이며 example.com 주소만 씁니다. 실제 직원 정보가 아닙니다. 마지막 세 명은 시험용입니다: 주소 없음(email null), 발송 실패 처리(bounce@example.com), 주소 형식 오류.",
+  "담당자": [
+    {
+      "id": "o001",
+      "name": "홍가상",
+      "department": "가상 비서실 정무과",
+      "email": "gasang01@example.com"
+    },
+    {
+      "id": "o002",
+      "name": "김시험",
+      "department": "가상 비서실 정무과",
+      "email": "gasang02@example.com"
+    },
+    {
+      "id": "o003",
+      "name": "이연습",
+      "department": "가상 비서실 민정과",
+      "email": "gasang03@example.com"
+    },
+    {
+      "id": "o004",
+      "name": "박모의",
+      "department": "가상 비서실 민정과",
+      "email": "gasang04@example.com"
+    },
+    {
+      "id": "o005",
+      "name": "최가짜",
+      "department": "가상 조정실 기획과",
+      "email": "gasang05@example.com"
+    },
+    {
+      "id": "o006",
+      "name": "정실습",
+      "department": "가상 조정실 기획과",
+      "email": "gasang06@example.com"
+    },
+    {
+      "id": "o007",
+      "name": "강시범",
+      "department": "가상 조정실 규제총괄과",
+      "email": "gasang07@example.com"
+    },
+    {
+      "id": "o008",
+      "name": "조예시",
+      "department": "가상 조정실 규제총괄과",
+      "email": "gasang08@example.com"
+    },
+    {
+      "id": "o009",
+      "name": "윤샘플",
+      "department": "가상 조정실 위원회지원과",
+      "email": "gasang09@example.com"
+    },
+    {
+      "id": "o010",
+      "name": "장테스트",
+      "department": "가상 조정실 위원회지원과",
+      "email": "gasang10@example.com"
+    },
+    {
+      "id": "o011",
+      "name": "임가상",
+      "department": "가상 공통 총무과",
+      "email": "gasang11@example.com"
+    },
+    {
+      "id": "o012",
+      "name": "한시험",
+      "department": "가상 공통 총무과",
+      "email": "gasang12@example.com"
+    },
+    {
+      "id": "o013",
+      "name": "오주소없음",
+      "department": "가상 공통 총무과",
+      "email": null
+    },
+    {
+      "id": "o014",
+      "name": "나실패",
+      "department": "가상 공통 총무과",
+      "email": "bounce@example.com"
+    },
+    {
+      "id": "o015",
+      "name": "구형식오류",
+      "department": "가상 공통 총무과",
+      "email": "gasang-invalid-address"
+    }
+  ]
+}

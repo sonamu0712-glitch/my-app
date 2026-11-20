@@ -6,12 +6,29 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "samples": "node scripts/make-samples.mjs",
+    "check-env": "node scripts/check-env.mjs",
+    "check-extract": "node scripts/check-extract.mjs",
+    "check-read": "node --import ./scripts/ts-hook.mjs scripts/check-read.mjs",
+    "check-rules": "node --import ./scripts/ts-hook.mjs scripts/check-rules.mjs",
+    "check-merge": "node --env-file=.env --import ./scripts/ts-hook.mjs scripts/check-merge.mjs",
+    "check-group": "node --import ./scripts/ts-hook.mjs scripts/check-group.mjs",
+    "check-queue": "node --import ./scripts/ts-hook.mjs scripts/check-queue.mjs",
+    "check-org": "node scripts/check-org.mjs",
+    "check-send": "node --import ./scripts/ts-hook.mjs scripts/check-send.mjs",
+    "check-history": "node --import ./scripts/ts-hook.mjs scripts/check-history.mjs",
+    "bench": "node --import ./scripts/ts-hook.mjs scripts/bench.mjs",
+    "check-ai": "node --env-file=.env --import ./scripts/ts-hook.mjs scripts/check-ai.mjs"
   },
   "dependencies": {
+    "fast-xml-parser": "^5.12.1",
+    "jszip": "^3.10.2",
     "next": "16.4.6",
+    "openai": "^7.62.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
